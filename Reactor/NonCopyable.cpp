@@ -1,10 +1,7 @@
 #include "NonCopyable.h"
 
-NonCopyable(const NonCopyable&)=delete {
-
-}
-
-NonCopyable &operator=(const NonCopyable &)=delete  {
+  NonCopyable::NonCopyable(const 
+ NonCopyable NonCopyable::&operator=(const NonCopyable &)=delete  {
 
 }
 

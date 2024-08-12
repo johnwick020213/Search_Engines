@@ -1,22 +1,22 @@
 #include "Socket.h"
 
-Socket() {
- 
-}
-
-explicit Socket(int fd) {
+Socket::Socket() {
 
 }
 
-~Socket() {
+explicit  Socket::Socket(int fd) {
 
 }
 
-int fd() const {
+  Socket::~Socket() {
 
 }
 
-void shutDownWrite() {
+ int Socket::fd() const {
+
+}
+
+ void Socket::shutDownWrite() {
 
 }
 

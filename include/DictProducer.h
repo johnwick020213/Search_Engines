@@ -22,16 +22,20 @@ public:
 
     void buildEnDict();
     void buildCnDict();
+
     void storeDict(const char *filepath);
 
+   private:
     void getFiles();
     void pushDict(const string & word);
-private:
-    vector<string> _files;
-    vector<pair<string,int>> _dict;
+
+    
+    string _dir;//语料库目录
+    vector<string> _files;//语料文件的绝对路径集合
+    vector<pair<string,int>> _dict;//词典
     SplitTool *_splitTool;
     map<string,set<int>> _index;
-};
+    };
    
 
 #endif 

@@ -9,6 +9,7 @@ using std::vector;
 
 class SplitTool
 {
+public:
     SplitTool();
     
     virtual ~SplitTool();

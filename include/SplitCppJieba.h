@@ -2,17 +2,26 @@
 #define __SPLITTOOLCPPJIEBA_H__
 
 #include"SplitTool.h"
+#include"cppjieba/Jieba.hpp"
+#include<string>
+#include<vector>
+#include<map>
+
+using std::string;
+using std::vector;
+using std::map;
 
 class SplitToolCppJieba
 :public SplitTool
 {
 public:
-    SplitToolCppJieba();
-    virtual ~SplitToolCppJieba();
-    virtual vector<string> cut(const string & sentence=0);
+    SplitToolCppJieba(map<string,string>&path);
+    ~SplitToolCppJieba();
+
+    vector<string> cut(const string & sentence);
 
 private:
-    Configuration &_conf;
+    cppjieba::Jieba _jieba;
 };
    
 

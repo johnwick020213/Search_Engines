@@ -4,7 +4,9 @@
 #include<iostream>
 #include<wfrest/json.hpp>
 #include"../include/KeyRecommander.h"
-
+#include<cctype>
+#include<iomanip>
+#include"../include/Dictionary.h"
 using Json = nlohmann::json;
 
 using std::cout;
@@ -19,10 +21,49 @@ void sighandler(int signum)
     waitGroup.done();
 }
 
+// 判断字符串是否包含 URL 编码
+bool containsUrlEncoding(const std::string& str) {
+    return str.find('%') != std::string::npos;
+}
+
+
+// 将 URL 编码字符串转换为原始字符串
+std::string decodeURIComponent(const std::string& encoded) {
+    std::string decoded;
+    decoded.reserve(encoded.size());
+
+    for (size_t i = 0; i < encoded.length(); ++i) {
+        if (encoded[i] == '%') {
+            if (i + 2 < encoded.length()) {
+                int value;
+                std::istringstream hex_stream(encoded.substr(i + 1, 2));
+                hex_stream >> std::hex >> value;
+                decoded += static_cast<char>(value);
+                i += 2;
+            }
+        } else {
+            decoded += encoded[i];
+        }
+    }
+    return decoded;
+}
+
+// 将双重编码的 URL 编码字符串转换为中文
+std::string decodeAndConvertToChinese(const std::string& double_encoded) {
+    std::string first_decode = decodeURIComponent(double_encoded);
+    std::string final_decode = decodeURIComponent(first_decode);
+    return final_decode;
+}
+
 int main()
 {
     signal(SIGINT, sighandler);
     wfrest::HttpServer server;
+
+
+    //预热
+    Dictionary *dict=Dictionary::createInstance();
+        
 
     //----------------------------------
     //业务代码
@@ -36,27 +77,25 @@ int main()
     });
 
     //2.推荐
-    server.GET("/advice", [](const wfrest::HttpReq *req, wfrest::HttpResp *resp) {
-        // 获取查询字符串
-        Json req_json=Json::parse(req->body());
-        //客户端json=[input:用户输入]
-        string usr_input=req_json["input"];
-
-        KeyRecommander kr(usr_input);
+    server.GET("/advice/{text}", [dict](const wfrest::HttpReq *req, wfrest::HttpResp *resp) {
+        // 获取查询字符串(双重编码的中文)
+        const string& usr_input_ori=req->param("text");
+        //解码
+        string tmpinput;
+        if (containsUrlEncoding(usr_input_ori)) {
+           tmpinput = decodeAndConvertToChinese(usr_input_ori);
+        }
+        else
+        {
+            tmpinput=usr_input_ori;
+        }
+        
+        const string usr_input=tmpinput;
+ 
+        //查询 
+        KeyRecommander kr(usr_input,dict);
         // 接收结果打包成json发给客户端
         Json json_object=kr.get_result();
-
-        // 添加推荐词到 json 对象中
-        json_object.push_back(usr_input);
-        json_object.push_back("推荐词2");
-        json_object.push_back("推荐词3");
-        json_object.push_back("推荐词4");
-        json_object.push_back("推荐词5");
-        json_object.push_back("推荐词6");
-        json_object.push_back("推荐词7");
-        json_object.push_back("推荐词8");
-        json_object.push_back("推荐词9");
-        json_object.push_back(usr_input);
 
         resp->Json(json_object);
         resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求

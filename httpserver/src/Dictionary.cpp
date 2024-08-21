@@ -1,48 +1,87 @@
 #include "../include/Dictionary.h"
-#include<iostream>
 #include<fstream>
+#include<iostream>
 #include<sstream>
-#include<set>
-using namespace std;
 
 
-void Dictionary::readDictAndIndex(const string& dict_path,const string& index_path) {
-    if(_isInited)
+using std::cerr;
+using std::ifstream;
+using std::istringstream;
+Dictionary* Dictionary::_pInstance = nullptr;
+
+
+Dictionary* Dictionary::createInstance() {
+    if(_pInstance==nullptr)
     {
-        return;
+        _pInstance=new Dictionary();
     }
+
+    return _pInstance;
+}
+
+vector<pair<string,int>>& Dictionary::get_enDict() {
+    return _en_dict;
+}
+
+vector<pair<string,int>>& Dictionary::get_cnDict() {
+    return _cn_dict;
+}
+
+map<string,set<int>>& Dictionary::getIndex() {
+    return _index_table;
+}
+
+ Dictionary::Dictionary()
+{
+    readDict("data/english.dat",_en_dict);
+    readDict("data/english.dat",_cn_dict);
+    readIndex("data/index.dat",_index_table);
+}
+
+void Dictionary::readDict(const string& dict_path,vector<pair<string,int>>& dict) {
+    ifstream ifs(dict_path);
+    if(!ifs)
+    {
+        cerr<<"error_in_Dictionary::readDict:打开字典失败\n";
+        exit(-1);
+    }
+
+    string lines;
+    string word;
+    int counts;
     
-    ifstream ifs_dict(dict_path);
-    if(!ifs_dict.good())
+
+    while(getline(ifs,lines))
     {
-        cerr<<"error_in_Dictionary::readDictAndIndex:文件打开失败\n";
-        return;
-    }
-    string line;
-    while(getline(ifs_dict,line))
-    {
-        istringstream iss(line);
-        string word;
-        int count;
+        istringstream iss(lines);
         iss>>word;
-        iss>>count;
-        _dict.push_back({word,count});
+        iss>>counts;
+        dict.push_back({word,counts});
+        
+    }
+    ifs.close();
+}
+
+void Dictionary::readIndex(const string & index_path,map<string,set<int>>& index_table)
+{
+    ifstream ifs(index_path);
+    if(!ifs)
+    {
+        cerr<<"error_in_Dictionary::readIndex:打开索引失败\n";
+        exit(-1);
     }
 
-    ifs_dict.close();
+    string lines;
+    string word;
+    set<int> counts;
+    
 
-    ifstream ifs_index(index_path);
-    if(!ifs_index)
+    while(getline(ifs,lines))
     {
-        cerr<<"error_in_Dictionary::readDictAndIndex:打开索引文件失败\n";
-        return;
-    }
-    while(getline(ifs_index,line))
-    {
-        istringstream iss(line);
-        string word;
+        istringstream iss(lines);
+        
         iss>>word;
-
+            
         auto p=_index_table.insert({word,set<int>()});
         if(p.second)
         {
@@ -56,37 +95,7 @@ void Dictionary::readDictAndIndex(const string& dict_path,const string& index_pa
         {
             cerr<<"error_in_Dictionary::readDictAndIndex:插入失败\n";
         }
+
     }
-    ifs_index.close();
-    _isInited=true;
+    ifs.close();
 }
-
-vector<pair<string,int>>& Dictionary::getDict()
-{
-    return _dict;
-}
-
-map<string,set<int>>& Dictionary::getIndex()
-{
-    return _index_table;
-}
-
-EnDicitionary *EnDicitionary::_pInstance1=nullptr;
-Dictionary* EnDicitionary::createInstance()
-{
-    if(_pInstance1==nullptr)
-    {
-        _pInstance1=new EnDicitionary();
-    }
-    return _pInstance1;
-}
-
-CnDictionary *CnDictionary::_pInstance2=nullptr;
- Dictionary*CnDictionary::createInstance() {
-    if(_pInstance2==nullptr)
-    {
-        _pInstance2=new CnDictionary();
-    }
-    return _pInstance2;
-}
-

@@ -15,35 +15,24 @@ using std::pair;
 class Dictionary
 {
 public:
-    Dictionary():_isInited(false){}
+    static Dictionary* createInstance();
 
-    void readDictAndIndex(const string& dict_path,const string& index_path);
-    vector<pair<string,int>>& getDict();
+    vector<pair<string,int>>& get_enDict();
+    vector<pair<string,int>>& get_cnDict();
     map<string,set<int>>& getIndex();
 
 private:
-
-    vector<pair<string,int>> _dict;
+    Dictionary();
+    void readDict(const string& dict_path,vector<pair<string,int>>& dict);
+    void readIndex(const string & index_path,map<string,set<int>>& index_table);
+    
+    vector<pair<string,int>> _cn_dict;
+    vector<pair<string,int>> _en_dict;
     map<string,set<int>> _index_table;
-    bool _isInited;
+    
+    static Dictionary * _pInstance;
 };
    
-
-class EnDicitionary:public Dictionary
-{
-public:
-    static Dictionary* createInstance();
-private:
-    static EnDicitionary* _pInstance1;
-};
-
-class CnDictionary:public Dictionary
-{
-public:
-    static Dictionary*createInstance();
-private:
-    static CnDictionary*_pInstance2;
-};
 
 #endif 
 

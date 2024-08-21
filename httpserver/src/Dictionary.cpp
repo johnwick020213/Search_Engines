@@ -34,7 +34,7 @@ map<string,set<int>>& Dictionary::getIndex() {
  Dictionary::Dictionary()
 {
     readDict("data/english.dat",_en_dict);
-    readDict("data/english.dat",_cn_dict);
+    readDict("data/chinese.dat",_cn_dict);
     readIndex("data/index.dat",_index_table);
 }
 

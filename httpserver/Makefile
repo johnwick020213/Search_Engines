@@ -1,7 +1,7 @@
 # 编译器
 CXX = g++
 # C++ 标准
-CXXFLAGS = -std=c++11 -I./include -I/path/to/wfrest/include -O2
+CXXFLAGS = -std=c++11 -I./include -I/path/to/wfrest/include -g
 # 链接选项
 LDFLAGS = -L/path/to/wfrest/lib -lworkflow -lwfrest -lpthread -g 
 

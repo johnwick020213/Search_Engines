@@ -18,16 +18,22 @@ using std::ofstream;
 
 void Index::init(const std::string& dictEnPath,const string& dictCnPath)
 {
-    read_Dict(dictEnPath);
-    read_Dict(dictCnPath);
+    read_enDict(dictEnPath);
 
-    for(size_t idx=0;idx!=_dict.size();++idx)
+    for(size_t idx=0;idx!=_en_dict.size();++idx)
     {
-        create_index(idx);
+        create_en_index(idx);
     }
+    read_cnDict(dictEnPath);
+
+    for(size_t idx=0;idx!=_cn_dict.size();++idx)
+    {
+        create_cn_index(idx);
+    }
+
 }
 
-void Index::read_Dict(const string&_path)
+void Index::read_enDict(const string&_path)
 {
     ifstream ifs(_path);
     if(!ifs)
@@ -43,15 +49,37 @@ void Index::read_Dict(const string&_path)
         string key;
         int value;
         ss>>key>>value;
-        _dict.push_back(make_pair(key,value));
+        _en_dict.push_back(make_pair(key,value));
     }
     ifs.close();
 }
 
-void Index::create_index(int index)
+void Index::read_cnDict(const string&_path)
+{
+    ifstream ifs(_path);
+    if(!ifs)
+    {
+        cerr<<"error_in_Index::read_Dict:打开"<<_path<<"失败\n";
+        exit(1);
+    }
+
+    string line;
+    while(getline(ifs,line))
+    {
+        stringstream ss(line);
+        string key;
+        int value;
+        ss>>key>>value;
+        _cn_dict.push_back(make_pair(key,value));
+    }
+    ifs.close();
+}
+
+
+void Index::create_cn_index(int index)
 {
      string key;
-     string word=_dict[index].first;
+     string word=_cn_dict[index].first;
      for(size_t idx=0;idx!=word.size();++idx)
      {
          char ch=word[idx];
@@ -86,11 +114,27 @@ void Index::create_index(int index)
          }
          else//英文
          {
-            key=word.substr(idx,1);   
+            continue;  
          }
          _index[key].insert(index);
      }
 }
+
+
+void Index::create_en_index(int index)
+{
+     string key;
+     string word=_en_dict[index].first;
+     for(size_t idx=0;idx!=word.size();++idx)
+     {
+         key=word.substr(idx,1);   
+        _index[key].insert(index);
+     }
+}
+
+
+ 
+
 
 void Index::store_index(const string&index_path) 
 {

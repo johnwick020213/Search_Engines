@@ -1,7 +1,9 @@
 #include "../include/KeyRecommander.h"
+#include<iostream>
 KeyRecommander::KeyRecommander(const string word,Dictionary *dict)
     :_queryWord(word),_dict(dict), _resultQue(CompareByDistance(_queryWord))
 {
+    //cout<<_queryWord<<"\n";
     execut();
 }
 
@@ -10,10 +12,12 @@ Json KeyRecommander::get_result() {
 
     for(int i=0;i<10;i++)
     {
-        tmp.push_back(_resultQue.top());
-        _resultQue.pop();
+        if(!_resultQue.empty())
+        {
+            tmp.push_back(_resultQue.top());
+            _resultQue.pop();
+        }
     }
-
     return tmp;
 
 }
@@ -42,10 +46,14 @@ void KeyRecommander::queryIndexTable()
         else//可能中文
         {
             string key=_queryWord.substr(i,3);
+            //cout<<"key:"<<key<<"\n";
             if(tmp.find(key)!=tmp.end())
             {
+                //cout<<"key存在\n";
                 const set<int>& indices=tmp[key];
+                //cout<<*indices.begin()<<"\n";
                 _sameword.insert(indices.begin(),indices.end());
+                //cout<<*_sameword.begin()<<" "<<*_sameword.end()<<"\n";
             }
             i+=3;
         }
@@ -56,12 +64,12 @@ void KeyRecommander::queryIndexTable()
 
 void KeyRecommander::statistic(set<int>& iset) {
     auto it=_sameword.begin();
-    for(;it!=_sameword.end();)
-    {
-        string result;   
-        if(_dict->get_cnDict()[*it].first.empty())
+    for(;it!=_sameword.end();++it)
+    { 
+        string result;
+        if(_dict->get_cnDict().size()<=*it)
         {
-            if(_dict->get_enDict()[*it].first.empty())
+            if(_dict->get_enDict().size()<=*it)
             {
                 continue;
             }
@@ -71,19 +79,19 @@ void KeyRecommander::statistic(set<int>& iset) {
                 _resultQue.push(result);
             }
         }
-        else
+        else 
         {
             result=_dict->get_cnDict()[*it].first;
             _resultQue.push(result);
 
 
-            if(_dict->get_enDict()[*it].first.empty())
+            if(_dict->get_enDict().size()<=*it)
             {
                 continue;
             }
             else
             {
-                result=_dict->get_enDict()[*it].first;
+              result=_dict->get_enDict()[*it].first;
                 _resultQue.push(result);
             }
 

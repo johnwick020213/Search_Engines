@@ -9,8 +9,8 @@
 #include <wfrest/json.hpp>
 #include "WebPage.h"
 #include "Mysql.h"
-
-using Json=nlohmann::json
+#include "SplitCppJieba.h"
+using Json=nlohmann::json;
 
 using std::pair;
 using std::set;
@@ -36,7 +36,7 @@ public:
     
 public:
     static WebPageQuery* getInstance();//创造单例对象，并自动释放
-    Json doQuery(const string&str);//接收查询词条，执行查询，返回结果；
+    Json doQuery(const string&str,SplitToolCppJieba *jieba);//接收查询词条，执行查询，返回结果；
 
 private:
     WebPageQuery();
@@ -56,9 +56,10 @@ private:
     map<string,vector<pair<int,double>>>  _invertIndexTable;//倒排索引库
     set<string>  _stopWordList;//停用词集
 
+    SplitToolCppJieba* _jieba;
     static AutoRelease _ar;
     static WebPageQuery* _pInstance;
-}
+};
    
 
 #endif 

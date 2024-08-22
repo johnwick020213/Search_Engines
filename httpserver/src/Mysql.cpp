@@ -15,7 +15,7 @@ using namespace std;
         return;
     }
 
-    MYSQL*ret = mysql_real_connect(_mysql,"192.168.7.78","root","020213","test",0,NULL,0);
+    MYSQL*ret = mysql_real_connect(_mysql,"192.168.7.230","root","020213","test",0,NULL,0);
     if(ret==NULL)
     {
         fprintf(stderr,"mysql_real_connect:%s\n",mysql_error(_mysql));

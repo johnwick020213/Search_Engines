@@ -1,32 +1,30 @@
-# 编译器
-CXX = g++
-# C++ 标准
-CXXFLAGS = -std=c++11 -I./include -I/path/to/wfrest/include -g
-# 链接选项
-LDFLAGS = -L/path/to/wfrest/lib -lworkflow -lwfrest -lpthread -g 
+# 定义编译器和编译选项
+CXX = g++ 
+CXXFLAGS = -std=c++11 -Wall -g
+LDFLAGS = -lwfrest -lmysqlclient
 
-# 源文件
-SRCDIR = src
-INCLUDEDIR = include
-SOURCES = $(SRCDIR)/Dictionary.cpp $(SRCDIR)/KeyRecommander.cpp $(SRCDIR)/httpserver.cc
-OBJECTS = $(SOURCES:.cpp=.o)
+# 定义目录
+INCLUDE_DIR = include
+SRC_DIR = src
+BIN_DIR = bin
 
-# 目标可执行文件
-TARGET = httpserver
+# 定义源文件和头文件
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%.o,$(SRCS))
 
-# 编译规则
-all: $(TARGET)
+# 定义最终生成的可执行文件
+TARGET = ./httpserver
 
-$(TARGET): $(OBJECTS)
+# 规则：生成目标文件
+$(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+# 规则：生成.o文件
+$(BIN_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
 
-# 清理
+# 伪目标：清理生成文件
+.PHONY: clean
 clean:
-	rm -f $(OBJECTS) $(TARGET)
-
-# 伪目标
-.PHONY: all clean
+	rm -rf $(BIN_DIR)/*.o $(TARGET)
 

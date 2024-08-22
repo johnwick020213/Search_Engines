@@ -1,6 +1,6 @@
 #include "../include/SplitCppJieba.h"
 #include "../include/Configuration.h"
-
+ 
 #include<map>
 
 using std::string;
@@ -16,9 +16,8 @@ const char* const STOP_WORD_PATH = "../dict/stop_words.utf8";
 SplitToolCppJieba::SplitToolCppJieba()
 :_jieba(DICT_PATH,
         HMM_PATH,
-        USER_DICT_PATH,
-        IDF_PATH,
-        STOP_WORD_PATH)
+        USER_DICT_PATH
+        )
 {
     
 }

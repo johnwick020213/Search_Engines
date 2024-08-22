@@ -6,7 +6,7 @@
 using std::ifstream;
 using std::istringstream;
 using std::cerr;
-
+Configuration* Configuration::_pInstance = nullptr;
 Configuration*  Configuration::getInstance(const string &filepath)
 {
     if(_pInstance==nullptr)
@@ -57,7 +57,7 @@ void Configuration::put_configMap()
         iss>>filepath;
         if(filepath.size()>0&&filename.size()>0)
         {
-            _configMap.insert(filename,filepath);
+            _configMap.insert(make_pair(filename,filepath));
         }
         else
         {

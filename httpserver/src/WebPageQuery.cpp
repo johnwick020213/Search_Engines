@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 //#include<pair>
-
+#include "../include/SplitCppJieba.h"
 using std::map;
 using std::cerr;
 using std::cout;
@@ -23,6 +23,7 @@ WebPageQuery::AutoRelease WebPageQuery::_ar;
 
 WebPageQuery::WebPageQuery() {
     loadLibrary();
+    _jieba=new SplitToolCppJieba();    
 }
 
 
@@ -43,10 +44,10 @@ void WebPageQuery::loadLibrary()
 {
  
     //1.偏移库读取
-    ifstream ifs1("data/offset_new.dat");
+    ifstream ifs1("data/newoffset.dat");
     if(!ifs1.good())
     {
-        cerr<<"error_in_WebPageQuery::loadLibrary:offset_new.dat打开失败\n";
+        cerr<<"error_in_WebPageQuery::loadLibrary:newoffset.dat打开失败\n";
         return;
     } 
     string line;
@@ -65,10 +66,10 @@ void WebPageQuery::loadLibrary()
 
     
     //2.网页库读取
-    ifstream ifs2("data/ripepage_new.dat");
+    ifstream ifs2("data/newripepage.dat");
     if(!ifs2.good())
     {
-        cerr<<"error_in_WebPageQuery::loadLibrary:ripepage_new.dat打开失败\n";
+        cerr<<"error_in_WebPageQuery::loadLibrary:newripepage.dat打开失败\n";
         return;
     } 
 
@@ -91,10 +92,10 @@ void WebPageQuery::loadLibrary()
     cout<<"读取文件数:"<<_pageLib.size()<<endl;
 
     //3.倒排索引库
-    ifstream ifs3("data/invertIndex.dat");
+    ifstream ifs3("data/invertIndex.txt");
     if(!ifs3.good())
     {
-        cerr<<"error_in_WebPageQuery::loadLibrary:invertIndex.dat打开失败\n";
+        cerr<<"error_in_WebPageQuery::loadLibrary:invertIndex.txt打开失败\n";
         return;
     }
     string word,strFreq;
@@ -119,7 +120,7 @@ void WebPageQuery::loadLibrary()
     ifstream ifs4("data/stop_words_eng.txt");
     if(!ifs4.good())
     {
-        cerr<<"error_in_WebPageQuery::loadLibrary:stop_words_eng.dat打开失败\n";
+        cerr<<"error_in_WebPageQuery::loadLibrary:stop_words_eng.txt打开失败\n";
         return;
     }
 
@@ -133,10 +134,10 @@ void WebPageQuery::loadLibrary()
 
     
 
-    ifstream ifs5("data/stop_words_zh.tst");
+    ifstream ifs5("data/stop_words_zh.txt");
     if(!ifs5.good())
     {
-        cerr<<"error_in_WebPageQuery::loadLibrary:stop_words_zh.dat打开失败\n";
+        cerr<<"error_in_WebPageQuery::loadLibrary:stop_words_zh.txt打开失败\n";
         return;
     }
     while(getline(ifs5,line))
@@ -174,7 +175,6 @@ Json WebPageQuery::doQuery(const string& str)
     while(!iss.eof())
     {
         iss>>tmpstr;
-
         if(_stopWordList.find(tmpstr)!=_stopWordList.end())
         {
             continue;
@@ -192,11 +192,11 @@ Json WebPageQuery::doQuery(const string& str)
             }
         }
     }
-
     //防止报错
     if(queryWords.size()==0)
     {
-        return Json(" ");
+        Json json;
+        return json;
     }
 
         map<int,vector<double>>resultVec;
@@ -220,7 +220,6 @@ Json WebPageQuery::doQuery(const string& str)
             RecommWebPage.insert(make_pair(cos,it->first));
         }
         
-        
         //3.将推荐的文章id插入
         vector<int> docIdVec;
         if(RecommWebPage.size()>5)
@@ -243,10 +242,11 @@ Json WebPageQuery::doQuery(const string& str)
 
 
         //4.
-        Json retStr=Json("");
+        Json retStr;
+        int i=0;
         for(auto & id:docIdVec)
         {
-            int i=0;
+            
             string content=_pageLib[id].getDocContent();
             string sunmmary=generateSummary(content,queryWords);
             retStr[i]["title"]=_pageLib[id].getDocTitle();
@@ -259,7 +259,6 @@ Json WebPageQuery::doQuery(const string& str)
 
     }
     return Json("");
-
 
 }
 
@@ -325,60 +324,52 @@ bool WebPageQuery::executeQuery(const map<string,int>&queryWords,map<int,vector<
 }
 
 
-string WebPageQuery::generateSummary(string& content,map<string,int>&queryWords)
-{
-    string summary,strTmp;
-    for(auto it = queryWords.begin();it!=queryWords.end();++it)
-    {
-        if(summary.find(it->first)!=string::npos)
-        {
+std::string WebPageQuery::generateSummary(std::string& content, std::map<std::string, int>& queryWords) {
+    std::string summary, strTmp;
+    
+    for (std::map<std::string, int>::const_iterator it = queryWords.begin(); it != queryWords.end(); ++it) {
+        const std::string& keyword = it->first; // 键
+        // 检查 summary 中是否已经包含了 keyword
+        if (summary.find(keyword) != std::string::npos) {
             continue;
         }
 
-        size_t pos=content.find(it->first);
-        if(pos!=string::npos)
-        {
-            size_t beg1=content.find("。",pos);
-            size_t beg2=content.find("，",pos);
-            size_t beg3=beg1>beg2?beg1:beg2;
-            size_t end1=content.find("。",pos);
-            size_t end2=content.find("，",pos);
-            size_t end3=end1>end2?end1:end2;
-            strTmp=content.substr(beg3+3,end3-beg3-3);
-        }
+        size_t pos = content.find(keyword);
+        if (pos != std::string::npos) {
+            size_t beg1 = content.find("。", pos);
+            size_t beg2 = content.find("，", pos);
+            size_t beg3 = std::max(beg1, beg2);
+            size_t end1 = content.find("。", pos);
+            size_t end2 = content.find("，", pos);
+            size_t end3 = std::max(end1, end2);
 
-        //处理接断字符
-        if(nBytesCode(strTmp[0]!=3))
-        {
-            if(nBytesCode(strTmp[1])==3)
-            {
-                strTmp.erase(0,1);
-            }
-            else
-            {
-                strTmp.erase(0,2);
+            if (beg3 != std::string::npos && end3 != std::string::npos) {
+                strTmp = content.substr(beg3 + 1, end3 - beg3 - 1);
             }
         }
 
-        size_t endIdx=strTmp.size()-1;
-        if(nBytesCode(strTmp[endIdx-2])!=3)
-        {
-            if(nBytesCode(strTmp[endIdx]==3))
-            {
-                strTmp.erase(endIdx,1);
-            }
-            else
-            {
-                strTmp.erase(endIdx-1,2);
+        // 处理截断字符
+        if (strTmp.size() > 0 && nBytesCode(strTmp[0]) != 1) {
+            if (nBytesCode(strTmp[1]) == 1) {
+                strTmp.erase(0, 1);
+            } else {
+                strTmp.erase(0, 2);
             }
         }
-        summary="..."+strTmp+"...";
+
+        size_t endIdx = strTmp.size() - 1;
+        if (endIdx >= 1 && nBytesCode(strTmp[endIdx - 1]) != 1) {
+            if (nBytesCode(strTmp[endIdx]) == 1) {
+                strTmp.erase(endIdx, 1);
+            } else {
+                strTmp.erase(endIdx - 1, 2);
+            }
+        }
+        summary = "..." + strTmp + "...";
     }
 
-    return summary;    
+    return summary;
 }
-
-
 //根据utf-8编码规则判断给定字符的字节数
 size_t WebPageQuery::nBytesCode(const char ch) {
     if(ch&(1<<7))

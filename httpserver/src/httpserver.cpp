@@ -62,8 +62,6 @@ int main()
 {
     signal(SIGINT, sighandler);
     wfrest::HttpServer server;
-
-
     //预热
     Dictionary *dict=Dictionary::createInstance();
     

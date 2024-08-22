@@ -2,48 +2,44 @@
 #include "../include/tinyxml2.h"
 #include <sstream>
 #include<cstring>
+#include<iostream>
+using std::cout;
 using std::ostringstream;
-
+using namespace tinyxml2;
 WebPage::WebPage(string &docStr)
 {
     tinyxml2::XMLDocument doc;
-    tinyxml2::XMLError error = doc.Parse(docStr.c_str());
-
-    if (error != tinyxml2::XML_SUCCESS) {
-        _docId = -1;
-        _docTitle = "";
-        _docUrl = "";
-        _docContent = "";
-        return;
-    }
+    doc.Parse(docStr.c_str());
 
     tinyxml2::XMLElement *rootElement = doc.RootElement();
-    if (rootElement == nullptr)
+    if(rootElement == NULL)
     {
         _docId = -1;
         _docTitle = "";
         _docUrl = "";
         _docContent = "";
-        return;
     }
+    else
+    {
+        string id = rootElement->FirstChildElement("docid")->GetText();
+        _docId = stoi(id);
 
-    tinyxml2::XMLElement *docIdElement = rootElement->FirstChildElement("docid");
-    if (docIdElement != nullptr) {
-        const char* idText = docIdElement->GetText();
-        _docId = idText ? stoi(string(idText)) : -1;
-    } else {
-        _docId = -1;
+        string url = rootElement->FirstChildElement("url")->GetText();
+        _docUrl = string(url);
+
+        string title = rootElement->FirstChildElement("title")->GetText();
+        _docTitle = string(title);
+
+        const char* content = rootElement->FirstChildElement("content")->GetText();
+        if(content == nullptr)
+        {
+            _docContent = string(" ");
+        }
+        else
+        {
+            _docContent = string(content);
+        }
     }
-
-    tinyxml2::XMLElement *urlElement = rootElement->FirstChildElement("url");
-    _docUrl = (urlElement && urlElement->GetText()) ? urlElement->GetText() : "";
-
-    tinyxml2::XMLElement *titleElement = rootElement->FirstChildElement("title");
-    _docTitle = (titleElement && titleElement->GetText()) ? titleElement->GetText() : "";
-
-    tinyxml2::XMLElement *contentElement = rootElement->FirstChildElement("content");
-    const char* contentText = (contentElement && contentElement->GetText()) ? contentElement->GetText() : " ";
-    _docContent = contentText;
 }
 
 void WebPage::setNewId(int id)

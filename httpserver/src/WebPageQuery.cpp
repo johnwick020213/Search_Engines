@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include<string>
 //#include<pair>
 #include "../include/SplitCppJieba.h"
 using std::map;
@@ -37,12 +38,12 @@ WebPageQuery*WebPageQuery::getInstance()
     }
     return _pInstance;
 }
- 
+
 //预热
 
 void WebPageQuery::loadLibrary()
 {
- 
+
     //1.偏移库读取
     ifstream ifs1("data/newoffset.dat");
     if(!ifs1.good())
@@ -64,7 +65,7 @@ void WebPageQuery::loadLibrary()
     } 
     ifs1.close();
 
-    
+
     //2.网页库读取
     ifstream ifs2("data/newripepage.dat");
     if(!ifs2.good())
@@ -73,7 +74,7 @@ void WebPageQuery::loadLibrary()
         return;
     } 
 
-    char *buff =new char[100000];
+    char *buff =new char[1000000];
 
     for(auto it=_offsetLib.begin();it!=_offsetLib.end();++it)
     {
@@ -132,7 +133,7 @@ void WebPageQuery::loadLibrary()
     }
     ifs4.close();
 
-    
+
 
     ifstream ifs5("data/stop_words_zh.txt");
     if(!ifs5.good())
@@ -162,6 +163,8 @@ vector<double> WebPageQuery::getQueryWeightVector(map<string,int>queryWords) {
         N=_pageLib.size();//网页库的文档数量
         IDF=(log(N/(DF+1)))/(log(2.0));//逆文档频率，表示该词对于该篇文章的重要性的一个系数
         base.push_back(TF*IDF);//TF*IDF权重
+        cout<<DF<<"\n";
+        cout<<N<<"\n";
     }
     return base;
 }
@@ -170,28 +173,50 @@ Json WebPageQuery::doQuery(const string& str)
 {
     //1.忽略停用词，插入查询map
     map<string,int> queryWords;
-    istringstream iss(str);
-    string tmpstr;
-    while(!iss.eof())
+    //istringstream iss(str);
+    vector<string>tempstr=_jieba->cut(str);
+ 
+    for(auto ch:tempstr)
     {
-        iss>>tmpstr;
-        if(_stopWordList.find(tmpstr)!=_stopWordList.end())
+        if(_stopWordList.find(ch)!=_stopWordList.end())
         {
             continue;
         }
         else
         {
-            auto it=queryWords.find(tmpstr);
+            auto it=queryWords.find(ch);
             if(it!=queryWords.end())
             {
                 it->second++;
             }
             else
             {   
-                queryWords.insert(make_pair(tmpstr,1));
+                queryWords.insert(make_pair(ch,1));
             }
         }
+
     }
+
+    /* while(!iss.eof()) */
+    /* { */
+    /*     iss>>tmpstr; */
+    /*     if(_stopWordList.find(tmpstr)!=_stopWordList.end()) */
+    /*     { */
+    /*         continue; */
+    /*     } */
+    /*     else */
+    /*     { */
+    /*         auto it=queryWords.find(tmpstr); */
+    /*         if(it!=queryWords.end()) */
+    /*         { */
+    /*             it->second++; */
+    /*         } */
+    /*         else */
+    /*         { */   
+    /*             queryWords.insert(make_pair(tmpstr,1)); */
+    /*         } */
+    /*     } */
+    /* } */
     //防止报错
     if(queryWords.size()==0)
     {
@@ -199,7 +224,7 @@ Json WebPageQuery::doQuery(const string& str)
         return json;
     }
 
-        map<int,vector<double>>resultVec;
+    map<int,vector<double>>resultVec;//<文章id，每个查询词的权重>
     if(executeQuery(queryWords,resultVec))
     {
         //2.网页按余弦曲线排序
@@ -219,7 +244,7 @@ Json WebPageQuery::doQuery(const string& str)
             double cos=XMultY/(sqrt(xSqu)*sqrt(ySqu));
             RecommWebPage.insert(make_pair(cos,it->first));
         }
-        
+
         //3.将推荐的文章id插入
         vector<int> docIdVec;
         if(RecommWebPage.size()>5)
@@ -234,7 +259,7 @@ Json WebPageQuery::doQuery(const string& str)
         }   
         else
         {
-            for(auto rit =RecommWebPage.begin();rit!=RecommWebPage.end();++rit)
+            for(auto rit =RecommWebPage.rbegin();rit!=RecommWebPage.rend();++rit)
             {
                 docIdVec.push_back(rit->second);
             }
@@ -246,7 +271,7 @@ Json WebPageQuery::doQuery(const string& str)
         int i=0;
         for(auto & id:docIdVec)
         {
-            
+
             string content=_pageLib[id].getDocContent();
             string sunmmary=generateSummary(content,queryWords);
             retStr[i]["title"]=_pageLib[id].getDocTitle();
@@ -271,51 +296,57 @@ bool WebPageQuery::executeQuery(const map<string,int>&queryWords,map<int,vector<
             return false;
         }
     }
-    auto word = queryWords.begin();
-    auto it = _invertIndexTable.find(word->first);
-    vector<double> vecTemp;
-    for (auto IdAndFreq = it->second.begin(); IdAndFreq != it->second.end();++IdAndFreq)
-    {
-        resultVec.insert(make_pair(IdAndFreq->first, vecTemp));
-    }
 
-    for(;word!=queryWords.end();++word)
+    auto word = queryWords.begin();//map<string,int>
+    multimap<int,double> vecTemp;
+
+    for(;word!=queryWords.end();++word)//遍历所有查询词
     {
-        it=_invertIndexTable.find(word->first);
-        for(auto IdAndFreq=it->second.begin();IdAndFreq!=it->second.end();++IdAndFreq)
+        auto it=_invertIndexTable.find(word->first);//it是一个map<string,set<int,double>>
+        for(auto id=it->second.begin();id!=it->second.end();++id)//遍历 it的第二个元素，也就是集合,遍历所有文章
         {
-            auto temp= resultVec.find(IdAndFreq->first);
-            if(temp!=resultVec.end())
-            {
-                temp->second.push_back(IdAndFreq->second);
-            }
+            vecTemp.insert(make_pair(id->first,id->second));//无序图存储文章id，和权重。
         }
     }
 
-    for(auto it = resultVec.begin();it!=resultVec.end();)
+    for(auto re=vecTemp.begin();re!=vecTemp.end();++re)
     {
-        if(it->second.size()<queryWords.size())
-        {
-            it=resultVec.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
+        resultVec[re->first].push_back(re->second);//multimap<int,double>转map<int,vector<double>>
     }
 
-    for(auto it =resultVec.begin();it!=resultVec.end();)
-    {
-        if(it->second.size()<queryWords.size())
-        {
-            it=resultVec.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
 
+    /*     for (auto IdAndFreq = it->second.begin(); IdAndFreq != it->second.end();++IdAndFreq)//it->second=set<int,double>,这一步在遍历集合 */
+    /* { */
+    /*     vecTemp=IdAndFreq->second; */
+    /*     resultVec.insert(make_pair(IdAndFreq->first, vecTemp));//搜索结果全部插入resultVec */
+    /* } */
+
+    /* { */
+    /*     it=_invertIndexTable.find(word->first); */
+    /*     for(auto IdAndFreq=it->second.begin();IdAndFreq!=it->second.end();++IdAndFreq) */
+    /*     { */
+    /*         auto temp= resultVec.find(IdAndFreq->first); */
+    /*         if(temp!=resultVec.end()) */
+    /*         { */
+    /*             temp->second.push_back(IdAndFreq->second); */
+    /*         } */
+    /*     } */
+    /* } */
+
+    /* for(auto it = resultVec.begin();it!=resultVec.end();) */
+    /* { */
+    /*     cout<<"1:"<<it->second.size()<<" 2:"<<queryWords.size()<<"\n"; */
+    /*     if(it->second.size()<queryWords.size()) */
+    /*     { */
+    /*         it=resultVec.erase(it); */
+    /*     } */
+    /*     else */
+    /*     { */
+    /*         ++it; */
+    /*     } */
+    /* } */
+
+    
     if(resultVec.size()==0)
     {
         return false;
@@ -326,7 +357,7 @@ bool WebPageQuery::executeQuery(const map<string,int>&queryWords,map<int,vector<
 
 std::string WebPageQuery::generateSummary(std::string& content, std::map<std::string, int>& queryWords) {
     std::string summary, strTmp;
-    
+
     for (std::map<std::string, int>::const_iterator it = queryWords.begin(); it != queryWords.end(); ++it) {
         const std::string& keyword = it->first; // 键
         // 检查 summary 中是否已经包含了 keyword

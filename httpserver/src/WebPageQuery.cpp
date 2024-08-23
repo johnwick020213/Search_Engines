@@ -18,7 +18,7 @@ using std::make_pair;
 using std::multimap;
 using std::pair;
 
-Mysql mysql;
+//Mysql mysql;
 
 WebPageQuery* WebPageQuery::_pInstance=nullptr;
 WebPageQuery::AutoRelease WebPageQuery::_ar;

@@ -37,7 +37,7 @@ public:
 
     friend bool operator==(const WebPage &lhs,const WebPage &rhs);
 
-private:
+private:        
     
     int _docId;
     string _docTitle;

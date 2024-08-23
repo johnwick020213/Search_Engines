@@ -1,5 +1,5 @@
 #include  "../include/WebPageQuery.h"
-
+#include<algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -7,6 +7,7 @@
 #include<string>
 //#include<pair>
 #include "../include/SplitCppJieba.h"
+#include <unicode/unistr.h>
 using std::map;
 using std::cerr;
 using std::cout;
@@ -67,14 +68,14 @@ void WebPageQuery::loadLibrary()
 
 
     //2.网页库读取
-    ifstream ifs2("data/newripepage.dat");
+    ifstream ifs2("data/newripepage.data");
     if(!ifs2.good())
     {
         cerr<<"error_in_WebPageQuery::loadLibrary:newripepage.dat打开失败\n";
         return;
     } 
 
-    char *buff =new char[1000000];
+    char *buff =new char[1000000];  
 
     for(auto it=_offsetLib.begin();it!=_offsetLib.end();++it)
     {
@@ -163,8 +164,6 @@ vector<double> WebPageQuery::getQueryWeightVector(map<string,int>queryWords) {
         N=_pageLib.size();//网页库的文档数量
         IDF=(log(N/(DF+1)))/(log(2.0));//逆文档频率，表示该词对于该篇文章的重要性的一个系数
         base.push_back(TF*IDF);//TF*IDF权重
-        cout<<DF<<"\n";
-        cout<<N<<"\n";
     }
     return base;
 }
@@ -237,49 +236,70 @@ Json WebPageQuery::doQuery(const string& str)
             auto it2=it->second.begin();
             for(;it1!=base.end();++it1,++it2)
             {
-                XMultY+=(*it1)*(*it2);
-                xSqu+=(*it1)*(*it1);
-                ySqu+=(*it2)*(*it2);
+                XMultY+=((*it1)*(*it2));
+                xSqu+=((*it1)*(*it1));
+                ySqu+=((*it2)*(*it2));
             }
             double cos=XMultY/(sqrt(xSqu)*sqrt(ySqu));
             RecommWebPage.insert(make_pair(cos,it->first));
         }
-
+        
         //3.将推荐的文章id插入
         vector<int> docIdVec;
-        if(RecommWebPage.size()>5)
+        map<int,double> weightmap;//文章id，推荐词权重和
+        for(auto ch:resultVec)
         {
-            int num =5;
-            auto rit =RecommWebPage.rbegin();
-            while(num--)
+            double weight=0;
+            for(auto ah:ch.second)
             {
-                docIdVec.push_back(rit->second);
-                rit++;
+                weight+=ah;        
             }
-        }   
-        else
-        {
-            for(auto rit =RecommWebPage.rbegin();rit!=RecommWebPage.rend();++rit)
-            {
-                docIdVec.push_back(rit->second);
-            }
+            weightmap.insert(make_pair(ch.first,weight));
+
         }
+        insertMaxCosIdToVec(weightmap, RecommWebPage, docIdVec);
+        /* if(RecommWebPage.size()>5) */
+        /* { */
+        /*     int num =5; */
+        /*     auto rit =RecommWebPage.rbegin(); */
+        /*     while(num--) */
+        /*     { */
+        /*         docIdVec.push_back(rit->second); */
+        /*         rit++; */
+        /*     } */
+        /* } */   
+        /* else */
+        /* { */
+        /*     for(auto rit =RecommWebPage.rbegin();rit!=RecommWebPage.rend();++rit) */
+        /*     { */
+        /*         docIdVec.push_back(rit->second); */
+        /*     } */
+        /* } */
 
 
         //4.
         Json retStr;
-        int i=0;
+        Json result=Json::array();
+        int result_count=10;
         for(auto & id:docIdVec)
         {
-
+            if(result_count==0)
+                break;
+            result_count--;
+            Json record;
             string content=_pageLib[id].getDocContent();
             string sunmmary=generateSummary(content,queryWords);
-            retStr[i]["title"]=_pageLib[id].getDocTitle();
-            retStr[i]["url"]=_pageLib[id].getDocUrl();
-            retStr[i]["summary"]=sunmmary;
-            retStr[i]["content"]=content;
-            i++;
+            icu::UnicodeString ustr=icu::UnicodeString::fromUTF8(sunmmary);
+            string ress;
+            ustr.toUTF8String(ress);
+            record={
+                {"summary",ress},
+                {"title",_pageLib[id].getDocTitle()},
+                {"url",_pageLib[id].getDocUrl()}
+            };
+            result.push_back(record);
         }
+        retStr["results"]=result;
         return retStr;
 
     }
@@ -375,7 +395,10 @@ std::string WebPageQuery::generateSummary(std::string& content, std::map<std::st
             size_t end3 = std::max(end1, end2);
 
             if (beg3 != std::string::npos && end3 != std::string::npos) {
-                strTmp = content.substr(beg3 + 1, end3 - beg3 - 1);
+                if(end3-beg3-1<1000)
+                    strTmp = content.substr(beg3 + 1, end3 - beg3 - 1);
+                else
+                    strTmp = content.substr(beg3 + 1, 1000);
             }
         }
 
@@ -396,7 +419,7 @@ std::string WebPageQuery::generateSummary(std::string& content, std::map<std::st
                 strTmp.erase(endIdx - 1, 2);
             }
         }
-        summary = "..." + strTmp + "...";
+        summary ="..."+strTmp+"...";
     }
 
     return summary;
@@ -421,4 +444,31 @@ size_t WebPageQuery::nBytesCode(const char ch) {
     }
     return 1;
 }
+
+
+void WebPageQuery::insertMaxCosIdToVec(const std::map<int, double>& weightmap,
+                         const std::multimap<double, int>& RecommWebPage,
+                         std::vector<int>& docIdVec)
+{
+     // 创建一个vector来存储cos和id的对
+    std::vector<std::pair<double, int>> sortedPages(RecommWebPage.begin(), RecommWebPage.end());
+    
+    // 按照cos值降序排序，如果cos相同则按照weight降序排序
+    std::sort(sortedPages.begin(), sortedPages.end(), 
+              [&weightmap](const std::pair<double, int>& a, const std::pair<double, int>& b) {
+                  if (a.first != b.first) {
+                      return a.first > b.first; // cos值从大到小
+                  } else {
+                      return weightmap.at(a.second) > weightmap.at(b.second); // weight从大到小
+                  }
+              });
+
+    // 将排序后的id依次插入docIdVec
+    for (const auto& page : sortedPages) {
+        docIdVec.push_back(page.second);
+    }
+}
+
+
+
 

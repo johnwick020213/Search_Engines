@@ -47,9 +47,10 @@ private:
     bool executeQuery(const map<string,int>&queryWords,map<int,vector<double>>&reultVec);//执行查询
     string generateSummary(string& content,map<string,int>&queryWords);
     size_t nBytesCode(const char ch);
-    
 
-
+    void insertMaxCosIdToVec(const std::map<int, double>& weightmap,
+                         const std::multimap<double, int>& RecommWebPage,
+                         std::vector<int>& docIdVec);
 private:
     map<int,WebPage> _pageLib;//网页库
     map<int,pair<int,int>> _offsetLib;//偏移库

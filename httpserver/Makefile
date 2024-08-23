@@ -1,7 +1,7 @@
 # 定义编译器和编译选项
 CXX = g++ 
 CXXFLAGS = -std=c++11 -Wall -g
-LDFLAGS = -lwfrest -lmysqlclient
+LDFLAGS = -lwfrest -lmysqlclient -licuuc -licudata -licui18n
 
 # 定义目录
 INCLUDE_DIR = include

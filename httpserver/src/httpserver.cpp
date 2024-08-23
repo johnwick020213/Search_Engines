@@ -85,9 +85,21 @@ int main()
         }
         const string usr_input=tmpinput;
         
+        
+        /* Json retStr={ */
+        /*     {"results", { */
+        /*         {{"summary", "...你好..."}, {"title", "测试标题1"}, {"url", "http://www.baidu.com"}}, */
+        /*         {{"summary", "...再见..."}, {"title", "测试标题2"}, {"url", "http://www.google.com"}}, */
+        /*         {{"summary", "...再见..."}, {"title", "测试标题2"}, {"url", "http://www.google.com"}} */
+
+        /*     }} */
+        /* }; */
+        /* resp->Json(retStr); */
+
+
         Json json_object=query->doQuery(usr_input);
-        resp->Json(json_object);
         resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求
+        resp->Json(json_object);
     });
 
     //2.推荐

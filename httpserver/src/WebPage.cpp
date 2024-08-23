@@ -3,45 +3,79 @@
 #include <sstream>
 #include<cstring>
 #include<iostream>
+#include<regex>
+using std::regex;
 using std::cout;
 using std::ostringstream;
 using namespace tinyxml2;
 WebPage::WebPage(string &docStr)
 {
-    tinyxml2::XMLDocument doc;
+     tinyxml2::XMLDocument doc;
     doc.Parse(docStr.c_str());
 
-    tinyxml2::XMLElement *rootElement = doc.RootElement();
-    if(rootElement == NULL)
+    XMLElement * docid = doc.FirstChildElement("doc")->FirstChildElement("docid");
+    if(docid)
     {
-        _docId = -1;
-        _docTitle = "";
-        _docUrl = "";
-        _docContent = "";
+        _docId =atoi(docid->GetText());
     }
-    else
+
+    XMLElement * title = doc.FirstChildElement("doc")->FirstChildElement("title");
+    if(title)
     {
-        string id = rootElement->FirstChildElement("docid")->GetText();
-        _docId = stoi(id);
-
-        string url = rootElement->FirstChildElement("url")->GetText();
-        _docUrl = string(url);
-
-        string title = rootElement->FirstChildElement("title")->GetText();
-        _docTitle = string(title);
-
-        const char* content = rootElement->FirstChildElement("content")->GetText();
-        if(content == nullptr)
-        {
-            _docContent = string(" ");
-        }
-        else
-        {
-            _docContent = string(content);
-        }
+        _docTitle = title->GetText();
     }
+
+    XMLElement *link = doc.FirstChildElement("doc")->FirstChildElement("link");
+    if (link)
+    {
+        _docUrl=link->GetText();
+    }
+
+    XMLElement *content=doc.FirstChildElement("doc")->FirstChildElement("description");
+    if(content)
+    {
+        _docContent=content->GetText();
+    }
+    
+    /* else{ */
+    /*     while (rootElement) */
+    /*     { */
+    /*         //还可以在此处判断指针是不是空指针，然后在赋值给string字符串 */
+    /*         XMLElement * title = rootElement->FirstChildElement("title"); */
+    /*         if(title) */
+    /*         { */
+    /*             _docContent += title->GetText(); */
+    /*             _docContent += "\n"; */
+    /*         } */
+
+    /*         XMLElement * link = rootElement->FirstChildElement("link"); */
+    /*         if(link) */
+    /*         { */
+    /*             _docContent += link->GetText(); */
+    /*             _docContent += "\n"; */
+    /*         } */
+
+    /*         regex reg("<[^>]+>");//通用正则表达式(主要研究一下正则表达式的规则) */
+    /*         XMLElement * description = rootElement->FirstChildElement("description"); */
+    /*         if(description) */
+    /*         { */
+    /*             string str = description->GetText(); */
+    /*             str = regex_replace(str, reg, "");//将HTML的标签去掉 */
+    /*             _docContent += str + "\n"; */
+    /*         } */
+    /*         XMLElement * content = rootElement->FirstChildElement("content"); */
+    /*         if(content) */
+    /*         { */
+    /*             string str = content->GetText(); */
+    /*             str = regex_replace(str, reg, "");//将HTML的标签去掉 */
+    /*             _docContent += str + "\n"; */
+    /*         } */
+
+    /*         rootElement = rootElement->NextSiblingElement("item");//找到下一篇item */
+    /*     } */
+    /* } */
+
 }
-
 void WebPage::setNewId(int id)
 {
     _docId = id;

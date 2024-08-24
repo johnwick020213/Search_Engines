@@ -10,10 +10,18 @@ KeyRecommander::KeyRecommander(const string word,Dictionary *dict)
 Json KeyRecommander::get_result() {
     Json tmp;
 
-    for(int i=0;i<10;i++)
+    tmp.push_back(_queryWord);
+    for(int i=0;i<9;i++)
     {
         if(!_resultQue.empty())
         {
+            if(_resultQue.top()==_queryWord)
+            {
+                _resultQue.pop();
+                i--;
+                continue;
+            }
+                
             tmp.push_back(_resultQue.top());
             _resultQue.pop();
         }
@@ -32,7 +40,7 @@ void KeyRecommander::queryIndexTable()
     map<string,set<int>>tmp=_dict->getIndex();
     for(size_t i=0;i<_queryWord.size();)
     {
-        if((_queryWord[i]&0x80)==0)//英文
+        if((_queryWord[i]&0x80)==0)//Ó¢ÎÄ
         {
             string key(1,_queryWord[i]);
 
@@ -43,13 +51,13 @@ void KeyRecommander::queryIndexTable()
             }
             i++;
         }
-        else//可能中文
+        else//¿ÉÄÜÖÐÎÄ
         {
             string key=_queryWord.substr(i,3);
             //cout<<"key:"<<key<<"\n";
             if(tmp.find(key)!=tmp.end())
             {
-                //cout<<"key存在\n";
+                //cout<<"key´æÔÚ\n";
                 const set<int>& indices=tmp[key];
                 //cout<<*indices.begin()<<"\n";
                 _sameword.insert(indices.begin(),indices.end());
@@ -140,7 +148,7 @@ int triple_min(const int &a, const int &b, const int &c)
 
 int editDistance(const std::string & lhs, const std::string &rhs)
 {
-    //计算最小编辑距离-包括处理中英文
+    //¼ÆËã×îÐ¡±à¼­¾àÀë-°üÀ¨´¦ÀíÖÐÓ¢ÎÄ
     size_t lhs_len = length(lhs);
     size_t rhs_len = length(rhs);
     int editDist[lhs_len + 1][rhs_len + 1];

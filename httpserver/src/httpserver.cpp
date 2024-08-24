@@ -8,7 +8,7 @@
 #include<iomanip>
 #include"../include/Dictionary.h"
 #include"../include/WebPageQuery.h"
-
+#include"../include/Redis.h"
 
 using Json = nlohmann::json;
 
@@ -64,67 +64,90 @@ int main()
     wfrest::HttpServer server;
     //预热
     Dictionary *dict=Dictionary::createInstance();
-    
+
     WebPageQuery* query=WebPageQuery::getInstance();
 
+    Redis redis;
+    redis.connect("192.168.7.129",6379);
     //----------------------------------
     //业务代码
 
     //1.搜索
-    server.GET("/search/{text}", [query](const wfrest::HttpReq *req, wfrest::HttpResp *resp){
-        // 获取查询字符串(双重编码的中文)
-        const string& usr_input_ori=req->param("text");
-        //解码
-        string tmpinput;
-        if (containsUrlEncoding(usr_input_ori)) {
-           tmpinput = decodeAndConvertToChinese(usr_input_ori);
-        }
-        else
-        {
-            tmpinput=usr_input_ori;
-        }
-        const string usr_input=tmpinput;
-        
-        
-        /* Json retStr={ */
-        /*     {"results", { */
-        /*         {{"summary", "...你好..."}, {"title", "测试标题1"}, {"url", "http://www.baidu.com"}}, */
-        /*         {{"summary", "...再见..."}, {"title", "测试标题2"}, {"url", "http://www.google.com"}}, */
-        /*         {{"summary", "...再见..."}, {"title", "测试标题2"}, {"url", "http://www.google.com"}} */
-
-        /*     }} */
-        /* }; */
-        /* resp->Json(retStr); */
+    server.GET("/search/{text}", [=](const wfrest::HttpReq *req, wfrest::HttpResp *resp){
+               // 获取查询字符串(双重编码的中文)
+               const string& usr_input_ori=req->param("text");
+               //解码
+               string tmpinput;
+               if (containsUrlEncoding(usr_input_ori)) {
+               tmpinput = decodeAndConvertToChinese(usr_input_ori);
+               }
+               else
+               {
+               tmpinput=usr_input_ori;
+               }
+               const string usr_input=tmpinput;
 
 
-        Json json_object=query->doQuery(usr_input);
-        resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求
-        resp->Json(json_object);
+               /* Json retStr={ */
+               /*     {"results", { */
+               /*         {{"summary", "...你好..."}, {"title", "测试标题1"}, {"url", "http://www.baidu.com"}}, */
+               /*         {{"summary", "...再见..."}, {"title", "测试标题2"}, {"url", "http://www.google.com"}}, */
+               /*         {{"summary", "...再见..."}, {"title", "测试标题2"}, {"url", "http://www.google.com"}} */
+
+               /*     }} */
+               /* }; */
+               /* resp->Json(retStr); */
+               Json json_object;
+               /* if(redis.get(usr_input)) */
+               /* { */
+               /*     json_object=redis.get(usr_input); */
+               /* } */ 
+               /* else */
+               /* { */
+               json_object=query->doQuery(usr_input);
+                   /* redis.set(usr_input,json_object); */
+               /* } */
+               resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求
+               resp->Json(json_object);
+ 
     });
 
     //2.推荐
-    server.GET("/advice/{text}", [dict](const wfrest::HttpReq *req, wfrest::HttpResp *resp) {
-        // 获取查询字符串(双重编码的中文)
-        const string& usr_input_ori=req->param("text");
-        //解码
-        string tmpinput;
-        if (containsUrlEncoding(usr_input_ori)) {
-           tmpinput = decodeAndConvertToChinese(usr_input_ori);
-        }
-        else
-        {
-            tmpinput=usr_input_ori;
-        }
-        
-        const string usr_input=tmpinput;
- 
-        //查询 
-        KeyRecommander kr(usr_input,dict);
-        // 接收结果打包成json发给客户端
-        Json json_object=kr.get_result();
+    server.GET("/advice/{text}", [=](const wfrest::HttpReq *req, wfrest::HttpResp *resp) {
+               // 获取查询字符串(双重编码的中文)
+               const string& usr_input_ori=req->param("text");
+               //解码
+               string tmpinput;
+               if (containsUrlEncoding(usr_input_ori)) {
+               tmpinput = decodeAndConvertToChinese(usr_input_ori);
+               }
+               else
+               {
+               tmpinput=usr_input_ori;
+               }
 
-        resp->Json(json_object);
-        resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求
+               const string usr_input=tmpinput;
+
+               //查询 
+               KeyRecommander kr(usr_input,dict);
+               // 接收结果打包成json发给客户端
+               //Json json_object=kr.get_result();
+
+                Json json_object;
+               if(redis.get(usr_input))
+               {
+                   json_object=redis.get(usr_input);
+               } 
+               else
+               {
+                   json_object=kr.get_result();
+                   redis.set(usr_input,json_object);
+               }
+               //resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求
+               //resp->Json(json_object);
+
+               resp->Json(json_object);
+               resp->headers["Access-Control-Allow-Origin"] = "*";  // 允许跨域请求
     });
 
     //----------------------------------
